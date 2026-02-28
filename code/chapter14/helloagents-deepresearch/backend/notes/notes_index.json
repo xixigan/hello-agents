@@ -1,0 +1,88 @@
+{
+  "notes": [
+    {
+      "id": "note_20260120_204039_0",
+      "title": "研究报告：打",
+      "type": "conclusion",
+      "tags": [
+        "deep_research",
+        "report"
+      ],
+      "created_at": "2026-01-20T20:40:39.606372"
+    },
+    {
+      "id": "note_20260120_204100_1",
+      "title": "研究报告：RAG",
+      "type": "conclusion",
+      "tags": [
+        "deep_research",
+        "report"
+      ],
+      "created_at": "2026-01-20T20:41:00.699412"
+    },
+    {
+      "id": "note_20260120_204100_2",
+      "title": "研究报告：RAG",
+      "type": "conclusion",
+      "tags": [
+        "deep_research",
+        "report"
+      ],
+      "created_at": "2026-01-20T20:41:00.699412"
+    },
+    {
+      "id": "note_20260120_204106_3",
+      "title": "研究报告：RAG",
+      "type": "conclusion",
+      "tags": [
+        "deep_research",
+        "report"
+      ],
+      "created_at": "2026-01-20T20:41:06.992364"
+    },
+    {
+      "id": "note_20260120_204113_4",
+      "title": "研究报告：RAG",
+      "type": "conclusion",
+      "tags": [
+        "deep_research",
+        "report"
+      ],
+      "created_at": "2026-01-20T20:41:13.139042"
+    },
+    {
+      "id": "note_20260120_213001_5",
+      "title": "研究报告：npm",
+      "type": "conclusion",
+      "tags": [
+        "deep_research",
+        "report"
+      ],
+      "created_at": "2026-01-20T21:30:01.533881"
+    },
+    {
+      "id": "note_20260120_213007_6",
+      "title": "研究报告：npm",
+      "type": "conclusion",
+      "tags": [
+        "deep_research",
+        "report"
+      ],
+      "created_at": "2026-01-20T21:30:07.304128"
+    },
+    {
+      "id": "note_20260120_213013_7",
+      "title": "研究报告：npm",
+      "type": "conclusion",
+      "tags": [
+        "deep_research",
+        "report"
+      ],
+      "created_at": "2026-01-20T21:30:13.139503"
+    }
+  ],
+  "metadata": {
+    "created_at": "2026-01-20T20:40:32.614998",
+    "total_notes": 8
+  }
+}

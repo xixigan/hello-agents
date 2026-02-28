@@ -9,20 +9,37 @@ from dotenv import load_dotenv
 
 # 加载环境变量
 load_dotenv()
-
+LLM_MODEL_ID="Qwen/Qwen3-VL-8B-Instruct"
+LLM_API_KEY="ms-5e5cbbee-fd94-41e4-8579-bafd79eb559e"
+LLM_BASE_URL="https://api-inference.modelscope.cn/v1"
+LLM_TIMEOUT=60
 # 先测试一个版本，使用 OpenAI 客户端
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.conditions import TextMentionTermination
 from autogen_agentchat.ui import Console
+from autogen_core.models import ModelInfo
 
 def create_openai_model_client():
     """创建 OpenAI 模型客户端用于测试"""
+    # 为ModelScope模型创建ModelInfo，包含所有必填字段
+    model_info = ModelInfo(
+        model_id=LLM_MODEL_ID,
+        model_family="qwen",
+        provider="modelscope",
+        vision=True,  # Qwen3-VL支持视觉
+        function_calling=True,  # 支持函数调用
+        json_output=True,  # 支持JSON输出
+        structured_output=True,  # 支持结构化输出
+        family="qwen"  # 重复添加family字段以满足验证要求
+    )
+    
     return OpenAIChatCompletionClient(
-        model=os.getenv("LLM_MODEL_ID", "gpt-4o"),
-        api_key=os.getenv("LLM_API_KEY"),
-        base_url=os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
+        model=LLM_MODEL_ID,
+        api_key=LLM_API_KEY,
+        base_url=LLM_BASE_URL,
+        model_info=model_info
     )
 
 def create_product_manager(model_client):

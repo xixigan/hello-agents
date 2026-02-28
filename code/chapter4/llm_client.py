@@ -1,4 +1,5 @@
 import os
+import time
 from openai import OpenAI
 from dotenv import load_dotenv
 from typing import List, Dict
@@ -25,32 +26,45 @@ class HelloAgentsLLM:
 
         self.client = OpenAI(api_key=apiKey, base_url=baseUrl, timeout=timeout)
 
-    def think(self, messages: List[Dict[str, str]], temperature: float = 0) -> str:
+    def think(self, messages: List[Dict[str, str]], temperature: float = 0, max_retries: int = 3) -> str:
         """
         调用大语言模型进行思考，并返回其响应。
+        针对429限流错误实现自动重试机制。
         """
-        print(f"🧠 正在调用 {self.model} 模型...")
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                stream=True,
-            )
-            
-            # 处理流式响应
-            print("✅ 大语言模型响应成功:")
-            collected_content = []
-            for chunk in response:
-                content = chunk.choices[0].delta.content or ""
-                print(content, end="", flush=True)
-                collected_content.append(content)
-            print()  # 在流式输出结束后换行
-            return "".join(collected_content)
+        for attempt in range(max_retries):
+            print(f"🧠 正在调用 {self.model} 模型... (尝试 {attempt+1}/{max_retries})")
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=temperature,
+                    stream=True,
+                )
+                
+                # 处理流式响应
+                print("✅ 大语言模型响应成功:")
+                collected_content = []
+                for chunk in response:
+                    content = chunk.choices[0].delta.content or ""
+                    print(content, end="", flush=True)
+                    collected_content.append(content)
+                print()  # 在流式输出结束后换行
+                return "".join(collected_content)
 
-        except Exception as e:
-            print(f"❌ 调用LLM API时发生错误: {e}")
-            return None
+            except Exception as e:
+                error_msg = str(e)
+                print(f"❌ 调用LLM API时发生错误: {error_msg}")
+                
+                # 检查是否为429限流错误
+                if "429" in error_msg and attempt < max_retries - 1:
+                    # 指数退避策略
+                    wait_time = 2 ** attempt
+                    print(f"⏳ 遇到限流，将在 {wait_time} 秒后重试...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    # 非429错误或已达到最大重试次数
+                    return None
 
 # --- 客户端使用示例 ---
 if __name__ == '__main__':
@@ -59,7 +73,7 @@ if __name__ == '__main__':
         
         exampleMessages = [
             {"role": "system", "content": "You are a helpful assistant that writes Python code."},
-            {"role": "user", "content": "写一个快速排序算法"}
+            {"role": "user", "content": "写一个冒泡排序算法"}
         ]
         
         print("--- 调用LLM ---")

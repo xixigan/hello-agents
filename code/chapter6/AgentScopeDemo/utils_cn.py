@@ -10,7 +10,7 @@ from agentscope.message import Msg
 
 # 游戏常量
 MAX_GAME_ROUND = 10
-MAX_DISCUSSION_ROUND = 3
+MAX_DISCUSSION_ROUND = 1  # 减少讨论轮数，降低API请求频率
 CHINESE_NAMES = [
     "刘备", "关羽", "张飞", "诸葛亮", "赵云",
     "曹操", "司马懿", "典韦", "许褚", "夏侯惇", 

@@ -3,45 +3,98 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-from serpapi import SerpApiClient
+import requests
+from bs4 import BeautifulSoup
 from typing import Dict, Any
 
 def search(query: str) -> str:
     """
-    一个基于SerpApi的实战网页搜索引擎工具。
+    一个基于百度搜索的网页搜索工具。
     它会智能地解析搜索结果，优先返回直接答案或知识图谱信息。
     """
-    print(f"🔍 正在执行 [SerpApi] 网页搜索: {query}")
+    print(f"🔍 正在执行 [百度] 网页搜索: {query}")
     try:
-        api_key = os.getenv("SERPAPI_API_KEY")
-        if not api_key:
-            return "错误：SERPAPI_API_KEY 未在 .env 文件中配置。"
-
+        # 使用百度桌面版搜索，参数更简单
+        url = "https://www.baidu.com/s"
         params = {
-            "engine": "google",
-            "q": query,
-            "api_key": api_key,
-            "gl": "cn",  # 国家代码
-            "hl": "zh-cn", # 语言代码
+            "wd": query,  # 桌面版使用wd参数
+            "ie": "utf-8",
+            "rn": "10"  # 返回10条结果
+        }
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Connection": "keep-alive",
+            "Host": "www.baidu.com",
+            "Referer": "https://www.baidu.com/",
+            "Upgrade-Insecure-Requests": "1",
+            "Cache-Control": "max-age=0"
         }
         
-        client = SerpApiClient(params)
-        results = client.get_dict()
+        response = requests.get(url, params=params, headers=headers)
+        # 检查响应头中的编码信息
+        content_type = response.headers.get('Content-Type', '')
+        if 'charset=' in content_type:
+            encoding = content_type.split('charset=')[-1].strip()
+            response.encoding = encoding
+        else:
+            # 尝试常见编码
+            try:
+                response.encoding = 'utf-8'
+                # 测试编码是否正确
+                _ = response.text
+            except UnicodeDecodeError:
+                response.encoding = 'gbk'
+        
+        # 调试：保存返回的HTML内容到文件
+        with open("baidu_response.html", "w", encoding="utf-8") as f:
+            f.write(response.text)
+            print("已保存百度搜索响应到 baidu_response.html 文件")
+        
+        soup = BeautifulSoup(response.text, "html.parser")
         
         # 智能解析：优先寻找最直接的答案
-        if "answer_box_list" in results:
-            return "\n".join(results["answer_box_list"])
-        if "answer_box" in results and "answer" in results["answer_box"]:
-            return results["answer_box"]["answer"]
-        if "knowledge_graph" in results and "description" in results["knowledge_graph"]:
-            return results["knowledge_graph"]["description"]
-        if "organic_results" in results and results["organic_results"]:
-            # 如果没有直接答案，则返回前三个有机结果的摘要
-            snippets = [
-                f"[{i+1}] {res.get('title', '')}\n{res.get('snippet', '')}"
-                for i, res in enumerate(results["organic_results"][:3])
-            ]
-            return "\n\n".join(snippets)
+        # 1. 寻找百度的直接答案区域（如百度知道、百度百科摘要等）
+        answer_area = None
+        
+        # 检查百度百科摘要
+        baike_summary = soup.find("div", class_="c-border c-border-gray2 c-bg-gray")
+        if baike_summary:
+            title = baike_summary.find("h3", class_="t c-gap-bottom-small")
+            content = baike_summary.find("div", class_="c-abstract")
+            if title and content:
+                return f"{title.text.strip()}\n{content.text.strip()}"
+        
+        # 检查百度知道答案
+        zhidao_answer = soup.find("div", class_="bd answer")
+        if zhidao_answer:
+            title = soup.find("h3", class_="t c-gap-bottom-small")
+            if title:
+                return f"{title.text.strip()}\n{zhidao_answer.text.strip()}"
+        
+        # 检查百度经验答案
+        jingyan_answer = soup.find("div", class_="exp-content")
+        if jingyan_answer:
+            title = soup.find("h3", class_="t c-gap-bottom-small")
+            if title:
+                return f"{title.text.strip()}\n{jingyan_answer.text.strip()}"
+        
+        # 2. 寻找有机搜索结果
+        organic_results = soup.find_all("div", class_="result")
+        if organic_results:
+            snippets = []
+            for i, result in enumerate(organic_results[:3]):
+                title_tag = result.find("h3", class_="t")
+                content_tag = result.find("div", class_="c-abstract")
+                
+                if title_tag:
+                    title = title_tag.text.strip()
+                    snippet = content_tag.text.strip() if content_tag else ""
+                    snippets.append(f"[{i+1}] {title}\n{snippet}")
+            
+            if snippets:
+                return "\n\n".join(snippets)
         
         return f"对不起，没有找到关于 '{query}' 的信息。"
 

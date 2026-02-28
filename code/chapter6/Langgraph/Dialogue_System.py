@@ -6,17 +6,18 @@
 """
 
 import asyncio
+import os
+import time
 from typing import TypedDict, Annotated
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import InMemorySaver
-import os
 from dotenv import load_dotenv
 from tavily import TavilyClient
 
-# 加载环境变量
+# 加载.env文件
 load_dotenv()
 
 # 定义状态结构
@@ -28,7 +29,7 @@ class SearchState(TypedDict):
     final_answer: str      # 最终答案
     step: str             # 当前步骤
 
-# 初始化模型和Tavily客户端
+# 初始化模型
 llm = ChatOpenAI(
     model=os.getenv("LLM_MODEL_ID", "gpt-4o-mini"),
     api_key=os.getenv("LLM_API_KEY"),
@@ -36,8 +37,26 @@ llm = ChatOpenAI(
     temperature=0.7
 )
 
-# 初始化Tavily客户端
-tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+def retry_llm_invoke(prompt, max_retries=3, delay=1):
+    """带重试机制的LLM调用函数，处理限流等API错误"""
+    for attempt in range(max_retries):
+        try:
+            return llm.invoke(prompt)
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ LLM调用失败 (尝试 {attempt+1}/{max_retries}): {error_msg}")
+            
+            # 检查是否为429限流错误
+            if "429" in error_msg or "rate limit" in error_msg.lower() or "Rate limit" in error_msg:
+                wait_time = delay * (2 ** attempt)  # 指数退避
+                print(f"⏳ 限流错误，将在 {wait_time} 秒后重试...")
+                time.sleep(wait_time)
+            else:
+                # 其他错误不再重试
+                raise
+    
+    # 所有重试都失败
+    raise Exception(f"LLM调用在 {max_retries} 次尝试后仍失败")
 
 def understand_query_node(state: SearchState) -> SearchState:
     """步骤1：理解用户查询并生成搜索关键词"""
@@ -59,23 +78,35 @@ def understand_query_node(state: SearchState) -> SearchState:
 理解：[用户需求总结]
 搜索词：[最佳搜索关键词]"""
 
-    response = llm.invoke([SystemMessage(content=understand_prompt)])
-    
-    # 提取搜索关键词
-    response_text = response.content
-    search_query = user_message  # 默认使用原始查询
-    
-    if "搜索词：" in response_text:
-        search_query = response_text.split("搜索词：")[1].strip()
-    elif "搜索关键词：" in response_text:
-        search_query = response_text.split("搜索关键词：")[1].strip()
-    
-    return {
-        "user_query": response.content,
-        "search_query": search_query,
-        "step": "understood",
-        "messages": [AIMessage(content=f"我理解您的需求：{response.content}")]
-    }
+    try:
+        response = retry_llm_invoke([SystemMessage(content=understand_prompt)])
+        
+        # 提取搜索关键词
+        response_text = response.content
+        search_query = user_message  # 默认使用原始查询
+        
+        if "搜索词：" in response_text:
+            search_query = response_text.split("搜索词：")[1].strip()
+        elif "搜索关键词：" in response_text:
+            search_query = response_text.split("搜索关键词：")[1].strip()
+        
+        return {
+            "user_query": response.content,
+            "search_query": search_query,
+            "step": "understood",
+            "messages": [AIMessage(content=f"我理解您的需求：{response.content}")]
+        }
+    except Exception as e:
+        error_msg = f"理解用户查询时发生错误: {str(e)}"
+        print(f"❌ {error_msg}")
+        
+        # 如果LLM调用失败，使用原始查询作为搜索词
+        return {
+            "user_query": user_message,
+            "search_query": user_message,
+            "step": "understood",
+            "messages": [AIMessage(content=f"我将直接搜索您的问题")]
+        }
 
 def tavily_search_node(state: SearchState) -> SearchState:
     """步骤2：使用Tavily API进行真实搜索"""
@@ -132,25 +163,26 @@ def tavily_search_node(state: SearchState) -> SearchState:
 def generate_answer_node(state: SearchState) -> SearchState:
     """步骤3：基于搜索结果生成最终答案"""
     
-    # 检查是否有搜索结果
-    if state["step"] == "search_failed":
-        # 如果搜索失败，基于LLM知识回答
-        fallback_prompt = f"""搜索API暂时不可用，请基于您的知识回答用户的问题：
+    try:
+        # 检查是否有搜索结果
+        if state["step"] == "search_failed":
+            # 如果搜索失败，基于LLM知识回答
+            fallback_prompt = f"""搜索API暂时不可用，请基于您的知识回答用户的问题：
 
 用户问题：{state['user_query']}
 
 请提供一个有用的回答，并说明这是基于已有知识的回答。"""
+            
+            response = retry_llm_invoke([SystemMessage(content=fallback_prompt)])
+            
+            return {
+                "final_answer": response.content,
+                "step": "completed",
+                "messages": [AIMessage(content=response.content)]
+            }
         
-        response = llm.invoke([SystemMessage(content=fallback_prompt)])
-        
-        return {
-            "final_answer": response.content,
-            "step": "completed",
-            "messages": [AIMessage(content=response.content)]
-        }
-    
-    # 基于搜索结果生成答案
-    answer_prompt = f"""基于以下搜索结果为用户提供完整、准确的答案：
+        # 基于搜索结果生成答案
+        answer_prompt = f"""基于以下搜索结果为用户提供完整、准确的答案：
 
 用户问题：{state['user_query']}
 
@@ -164,16 +196,32 @@ def generate_answer_node(state: SearchState) -> SearchState:
 4. 回答要结构清晰、易于理解
 5. 如果搜索结果不够完整，请说明并提供补充建议"""
 
-    response = llm.invoke([SystemMessage(content=answer_prompt)])
-    
-    return {
-        "final_answer": response.content,
-        "step": "completed",
-        "messages": [AIMessage(content=response.content)]
-    }
+        response = retry_llm_invoke([SystemMessage(content=answer_prompt)])
+        
+        return {
+            "final_answer": response.content,
+            "step": "completed",
+            "messages": [AIMessage(content=response.content)]
+        }
+    except Exception as e:
+        error_msg = f"生成答案时发生错误: {str(e)}"
+        print(f"❌ {error_msg}")
+        
+        # 返回友好的错误提示
+        error_response = f"抱歉，我在生成答案时遇到了一些问题：\n{str(e)}\n\n建议您稍后重试，或者尝试使用更具体的问题描述。"
+        
+        return {
+            "final_answer": error_response,
+            "step": "completed",
+            "messages": [AIMessage(content=error_response)]
+        }
 
 # 构建搜索工作流
-def create_search_assistant():
+def create_search_assistant(tavily_client_instance):
+    # 将tavily_client设为全局变量，以便搜索节点使用
+    global tavily_client
+    tavily_client = tavily_client_instance
+    
     workflow = StateGraph(SearchState)
     
     # 添加三个节点
@@ -201,7 +249,11 @@ async def main():
         print("❌ 错误：请在.env文件中配置TAVILY_API_KEY")
         return
     
-    app = create_search_assistant()
+    # 初始化Tavily客户端
+    global tavily_client
+    tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+    
+    app = create_search_assistant(tavily_client)
     
     print("🔍 智能搜索助手启动！")
     print("我会使用Tavily API为您搜索最新、最准确的信息")
@@ -252,8 +304,16 @@ async def main():
             print("\n" + "="*60 + "\n")
         
         except Exception as e:
-            print(f"❌ 发生错误: {e}")
-            print("请重新输入您的问题。\n")
+            error_msg = str(e)
+            print(f"❌ 发生错误: {error_msg}")
+            
+            # 根据错误类型提供更具体的建议
+            if "429" in error_msg or "rate limit" in error_msg.lower():
+                print("💡 提示：当前服务存在限流，建议您稍后重试或使用更具体的问题描述。\n")
+            elif "API_KEY" in error_msg or "api_key" in error_msg.lower():
+                print("💡 提示：请检查您的API密钥配置是否正确。\n")
+            else:
+                print("请重新输入您的问题。\n")
 
 if __name__ == "__main__":
     asyncio.run(main())

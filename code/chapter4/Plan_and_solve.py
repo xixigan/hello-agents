@@ -92,9 +92,14 @@ class Executor:
             
             response_text = self.llm_client.think(messages=messages) or ""
             
+            if not response_text:
+                response_text = "⚠️ 未能获取有效响应"
+                print(f"⚠️ 步骤 {i} 完成，但未获取到有效响应")
+            else:
+                print(f"✅ 步骤 {i} 已完成，结果: {response_text}")
+            
             history += f"步骤 {i}: {step}\n结果: {response_text}\n\n"
             final_answer = response_text
-            print(f"✅ 步骤 {i} 已完成，结果: {final_answer}")
             
         return final_answer
 

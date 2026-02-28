@@ -8,10 +8,149 @@ import os
 import random
 from typing import List, Dict, Optional
 
+# 加载环境变量
+from dotenv import load_dotenv
+load_dotenv()
+
 from agentscope.agent import ReActAgent
-from agentscope.model import DashScopeChatModel
+from agentscope.model import OpenAIChatModel
 from agentscope.pipeline import MsgHub, sequential_pipeline, fanout_pipeline
-from agentscope.formatter import DashScopeMultiAgentFormatter
+from agentscope.formatter import OpenAIChatFormatter
+
+# 自定义模型类，添加速率限制重试机制
+class RetryOpenAIChatModel(OpenAIChatModel):
+    async def __call__(self, messages, tools=None, tool_choice=None, structured_model=None, **kwargs):
+        import asyncio
+        from openai import RateLimitError as OpenAIRateLimitError
+        import httpx
+        import httpcore
+        
+        max_retries = 5
+        retry_delay = 1  # 初始延迟1秒
+        fixed_delay = 0.5  # 每次请求后添加的固定延迟
+        
+        for attempt in range(max_retries):
+            try:
+                # 基于当前环境检测后端类型，决定是否需要严格清理不兼容字段（如 prefix / required）
+                llm_model_id = os.environ.get("LLM_MODEL_ID", "").lower()
+                llm_base_url = os.environ.get("LLM_BASE_URL", "").lower()
+
+                # 如果不是官方 OpenAI，或显式是第三方（例如 THUDM / GLM / siliconflow），启用严格清理模式
+                is_openai_provider = ("openai" in llm_base_url) or llm_model_id.startswith("gpt") or "openai" in llm_model_id
+                strict_clean = ("siliconflow" in llm_base_url) or ("thudm" in llm_model_id) or ("glm" in llm_model_id)
+
+                prefix_keys = {"prefix", "prefix_text", "instruction_prefix", "explain_prefix"}
+
+                def _recursive_clean(obj, remove_required: bool = False) -> bool:
+                    """递归清理 dict/list 中的前缀字段和（可选）required 字段，返回是否有移除操作"""
+                    removed_any = False
+                    if isinstance(obj, dict):
+                        for k in list(obj.keys()):
+                            if k in prefix_keys:
+                                obj.pop(k, None)
+                                removed_any = True
+                            elif remove_required and k == "required":
+                                obj.pop(k, None)
+                                removed_any = True
+                            else:
+                                try:
+                                    sub = obj.get(k)
+                                    if _recursive_clean(sub, remove_required):
+                                        removed_any = True
+                                except Exception:
+                                    pass
+                    elif isinstance(obj, list):
+                        for item in obj:
+                            if _recursive_clean(item, remove_required):
+                                removed_any = True
+                    return removed_any
+
+                # 在严格模式下，递归清理 tool_choice、tools、kwargs 中的前缀和 required 字段
+                if strict_clean and not is_openai_provider:
+                    removed = False
+                    if isinstance(tool_choice, dict):
+                        if _recursive_clean(tool_choice, remove_required=True):
+                            removed = True
+                    if isinstance(tools, list):
+                        for t in tools:
+                            if _recursive_clean(t, remove_required=True):
+                                removed = True
+                    # 对 kwargs 全面清理，防止当 structured_model/formatter 生成了不兼容选项
+                    if _recursive_clean(kwargs, remove_required=True):
+                        removed = True
+                    if removed:
+                        print("⚠️ 检测到并移除了与第三方模型不兼容的 'prefix' 或 'required' 字段")
+                else:
+                    # 非严格模式下，也仅清理 json_schema 下的 prefix 字段，避免普通字段被误删
+                    rf = kwargs.get("response_format")
+                    removed = False
+                    if isinstance(rf, dict) and rf.get("type") == "json_schema":
+                        if _recursive_clean(rf, remove_required=False):
+                            removed = True
+                        kwargs["response_format"] = rf
+                    for k, v in list(kwargs.items()):
+                        if isinstance(v, dict) and v.get("type") == "json_schema":
+                            if _recursive_clean(v, remove_required=False):
+                                removed = True
+                            kwargs[k] = v
+                    if removed:
+                        print("⚠️ 检测到并移除了 response_format 中的前缀字段，以兼容 json_schema 模式")
+
+                # 在调用父类前，如果提供了 structured_model（如 Pydantic 模型），则显式构造不含 'prefix' 的 response_format 以防第三方后端拒绝带 prefix 的 json_schema
+                try:
+                    if structured_model is not None:
+                        schema = None
+                        # 如果 structured_model 是 Pydantic 模型类或实例，使用 .schema() 获取 json-schema
+                        if hasattr(structured_model, "schema") and callable(getattr(structured_model, "schema")):
+                            schema = structured_model.schema()
+                        # 如果 structured_model 是已生成的 dict schema 或其它 dict，也支持直接使用
+                        if isinstance(schema, dict):
+                            # 覆盖或设置 response_format，确保没有 'prefix' 字段
+                            kwargs["response_format"] = {"type": "json_schema", "json_schema": schema}
+                except Exception:
+                    pass
+
+                # 调用父类的__call__方法，并在遇到 BadRequestError（如后端拒绝 json_schema 中的 prefix）时尝试回退并重试一次
+                from openai import BadRequestError
+                try:
+                    result = await super().__call__(messages, tools, tool_choice, structured_model, **kwargs)
+                except BadRequestError as e:
+                    msg = str(e)
+                    # 针对 20015 / prefix 不被允许 的错误进行特定回退
+                    if ("prefix" in msg and "json_schema" in msg) or "20015" in msg:
+                        print("⚠️ 后端返回 prefix 不允许错误，正在移除所有 'prefix' 字段并重试一次...")
+                        try:
+                            if isinstance(tool_choice, dict):
+                                _recursive_clean(tool_choice, remove_required=True)
+                            if isinstance(tools, list):
+                                for t in tools:
+                                    _recursive_clean(t, remove_required=True)
+                            _recursive_clean(kwargs, remove_required=True)
+                            # 如果有 structured_model，确保 response_format 使用干净的 schema
+                            if structured_model is not None and hasattr(structured_model, "schema") and callable(getattr(structured_model, "schema")):
+                                schema = structured_model.schema()
+                                if isinstance(schema, dict):
+                                    kwargs["response_format"] = {"type": "json_schema", "json_schema": schema}
+                        except Exception:
+                            pass
+                        # 重试一次（如再次失败则抛出）
+                        result = await super().__call__(messages, tools, tool_choice, structured_model, **kwargs)
+                    else:
+                        raise
+                
+                # 在每次成功请求后添加固定延迟，减少API调用频率
+                await asyncio.sleep(fixed_delay)
+                return result
+            except (OpenAIRateLimitError, httpx.TimeoutException, httpcore.TimeoutException, httpx.ConnectError):
+                if attempt == max_retries - 1:
+                    # 最后一次重试失败，重新抛出异常
+                    raise
+                
+                # 指数退避重试
+                print(f"⚠️  遇到速率限制或连接问题，{retry_delay}秒后重试... (第{attempt + 1}/{max_retries}次)")
+                await asyncio.sleep(retry_delay)
+                retry_delay *= 2  # 指数增加延迟时间
+                retry_delay = min(retry_delay, 60)  # 最大延迟不超过60秒
 
 from prompt_cn import ChinesePrompts
 from game_roles import GameRoles
@@ -60,12 +199,15 @@ class ThreeKingdomsWerewolfGame:
         agent = ReActAgent(
             name=name,
             sys_prompt=ChinesePrompts.get_role_prompt(role, character),
-            model=DashScopeChatModel(
-                model_name="qwen-max",
-                api_key=os.environ["DASHSCOPE_API_KEY"],
-                enable_thinking=True,
+            model=RetryOpenAIChatModel(
+                model_name=os.environ["LLM_MODEL_ID"],
+                api_key=os.environ["LLM_API_KEY"],
+                client_kwargs={
+                    "base_url": os.environ["LLM_BASE_URL"],
+                    "timeout": 60.0  # 设置60秒超时
+                },
             ),
-            formatter=DashScopeMultiAgentFormatter(),
+            formatter=OpenAIChatFormatter(),
         )
         
         # 角色身份确认
@@ -368,9 +510,11 @@ class ThreeKingdomsWerewolfGame:
 async def main():
     """主函数"""
     # 检查环境变量
-    if "DASHSCOPE_API_KEY" not in os.environ:
-        print("❌ 请设置环境变量 DASHSCOPE_API_KEY")
-        return
+    required_env_vars = ["LLM_MODEL_ID", "LLM_API_KEY", "LLM_BASE_URL"]
+    for env_var in required_env_vars:
+        if env_var not in os.environ:
+            print(f"❌ 请设置环境变量 {env_var}")
+            return
     
     print("🎮 欢迎来到三国狼人杀！")
     
