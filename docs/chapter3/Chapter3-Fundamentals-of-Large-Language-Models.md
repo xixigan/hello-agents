@@ -37,10 +37,10 @@ $$P(w_i∣w_{i−1})=\frac{Count(w_{i−1},w_i)}{Count(w_{i−1})}$$
 
 Here, the `Count()` function represents "counting":
 
-- $Count(w_i−1,w_i)$: represents the total number of times the word pair $(w_{i−1},w_i)$ appears consecutively in the corpus.
+- $Count(w_{i−1},w_i)$: represents the total number of times the word pair $(w_{i−1},w_i)$ appears consecutively in the corpus.
 - $Count(w_{i−1})$: represents the total number of times the single word $w_{i−1}$ appears in the corpus.
 
-The formula's meaning is: we use "the number of times word pair $Count(w_i−1,w_i)$ appears" divided by "the total number of times word $Count(w_{i−1})$ appears" as an approximate estimate of $P(w_i∣w_{i−1})$.
+The formula's meaning is: we use "the number of times word pair $Count(w_{i−1},w_i)$ appears" divided by "the total number of times word $Count(w_{i−1})$ appears" as an approximate estimate of $P(w_i∣w_{i−1})$.
 
 To make this process more concrete, let's manually perform a calculation. Suppose we have a mini corpus containing only the following two sentences: `datawhale agent learns`, `datawhale agent works`. Our goal is: using a Bigram (N=2) model, estimate the probability of the sentence `datawhale agent learns` appearing. According to the Bigram assumption, we examine consecutive pairs of words (i.e., word pairs) each time.
 

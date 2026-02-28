@@ -9,6 +9,8 @@ import os
 import time
 import tempfile
 from hello_agents.tools import RAGTool
+from dotenv import load_dotenv
+load_dotenv()
 
 class MarkItDownPipelineDemo:
     """MarkItDown处理管道演示类"""
@@ -153,8 +155,8 @@ class Person:
             start_time = time.time()
             
             # 使用RAGTool添加文档，内部会调用MarkItDown
-            result = self.rag_tool.execute("add_document", 
-                                         file_path=file_path)
+            result = self.rag_tool.run({"action":"add_document", 
+                                         "file_path":file_path})
             
             process_time = time.time() - start_time
             
@@ -245,11 +247,11 @@ class Person:
 """
         
         print(f"\n📝 添加复杂Markdown文档进行分块测试...")
-        result = self.rag_tool.execute("add_text",
-                                     text=complex_markdown,
-                                     document_id="ai_tech_stack",
-                                     chunk_size=800,
-                                     chunk_overlap=100)
+        result = self.rag_tool.run({"action":"add_text",
+                                     "text":complex_markdown,
+                                     "document_id":"ai_tech_stack",
+                                     "chunk_size":800,
+                                     "chunk_overlap":100})
         
         print(f"分块结果: {result}")
         
@@ -265,9 +267,9 @@ class Person:
         
         for query, description in search_queries:
             print(f"\n查询: '{query}' ({description})")
-            search_result = self.rag_tool.execute("search",
-                                                query=query,
-                                                limit=2)
+            search_result = self.rag_tool.run({"action":"search",
+                                                "query":query,
+                                                "limit":2})
             print(f"检索结果: {search_result[:200]}...")
     
     def demonstrate_embedding_optimization(self):
@@ -301,17 +303,17 @@ def process_data(data):
         print(raw_markdown)
         
         # 添加到RAG系统，内部会进行预处理
-        result = self.rag_tool.execute("add_text",
-                                     text=raw_markdown,
-                                     document_id="preprocessing_demo")
+        result = self.rag_tool.run({"action":"add_text",
+                                     "text":raw_markdown,
+                                     "document_id":"preprocessing_demo"})
         
         print(f"\n✅ 预处理并添加完成: {result}")
         
         # 测试预处理后的检索效果
         print(f"\n🔍 测试预处理后的检索效果:")
-        search_result = self.rag_tool.execute("search",
-                                            query="Python函数处理数据",
-                                            limit=1)
+        search_result = self.rag_tool.run({"action":"search",
+                                            "query":"Python函数处理数据",
+                                            "limit":1})
         print(f"检索结果: {search_result}")
     
     def demonstrate_pipeline_performance(self):
@@ -348,7 +350,7 @@ def process_data(data):
         print(f"平均每文档: {batch_time/10:.3f}秒")
         
         # 获取最终统计
-        stats = self.rag_tool.execute("stats")
+        stats = self.rag_tool.run({"action":"stats"})
         print(f"\n📊 最终统计: {stats}")
 
 def main():

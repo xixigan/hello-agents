@@ -5,6 +5,8 @@
 展示MemoryTool和MemoryManager的分层架构
 """
 
+from dotenv import load_dotenv
+load_dotenv()
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from hello_agents.tools import MemoryTool
@@ -36,7 +38,7 @@ class MemoryToolArchitectureDemo:
         )
         
         print(f"\n✅ MemoryTool初始化完成")
-        print(f"👤 用户ID: {self.user_id}")
+        print(f"👤 用户ID: {memory_tool.memory_manager.user_id}")
         print(f"🧠 启用的记忆类型: {memory_tool.memory_types}")
         print(f"⚙️ 配置对象: {type(memory_tool.memory_config).__name__}")
         
@@ -105,36 +107,40 @@ class MemoryToolArchitectureDemo:
             
             # 添加示例记忆来演示特点
             if memory_type == "working":
-                memory_tool.execute("add",
-                    content=f"演示{info['name']}的临时存储特性",
-                    memory_type=memory_type,
-                    importance=0.6,
-                    demo_feature="temporary_storage"
-                )
+                memory_tool.run({
+                    "action":"add",
+                    "content":f"演示{info['name']}的临时存储特性",
+                    "memory_type":memory_type,
+                    "importance":0.6,
+                    "demo_feature":"temporary_storage"
+                })
             elif memory_type == "episodic":
-                memory_tool.execute("add",
-                    content=f"演示{info['name']}的事件记录特性",
-                    memory_type=memory_type,
-                    importance=0.7,
-                    event_type="demonstration",
-                    session_context="architecture_demo"
-                )
+                memory_tool.run({
+                    "action":"add",
+                    "content":f"演示{info['name']}的事件记录特性",
+                    "memory_type":memory_type,
+                    "importance":0.7,
+                    "event_type":"demonstration",
+                    "session_context":"architecture_demo"
+                })
             elif memory_type == "semantic":
-                memory_tool.execute("add",
-                    content=f"{info['name']}用于存储概念性知识和实体关系",
-                    memory_type=memory_type,
-                    importance=0.8,
-                    concept="memory_architecture",
-                    domain="cognitive_computing"
-                )
+                memory_tool.run({
+                    "action":"add",
+                    "content":f"{info['name']}用于存储概念性知识和实体关系",
+                    "memory_type":memory_type,
+                    "importance":0.8,
+                    "concept":"memory_architecture",
+                    "domain":"cognitive_computing"
+                })
             elif memory_type == "perceptual":
-                memory_tool.execute("add",
-                    content=f"演示{info['name']}的多模态数据处理",
-                    memory_type=memory_type,
-                    importance=0.6,
-                    modality="text",
-                    data_type="demonstration"
-                )
+                memory_tool.run({
+                    "action":"add",
+                    "content":f"演示{info['name']}的多模态数据处理",
+                    "memory_type":memory_type,
+                    "importance":0.6,
+                    "modality":"text",
+                    "data_type":"demonstration"
+                })
     
     def demonstrate_unified_interface(self, memory_tool):
         """演示统一接口的设计优势"""
@@ -158,7 +164,7 @@ class MemoryToolArchitectureDemo:
         for operation, params in operations:
             print(f"\n操作: {operation}")
             print(f"参数: {params}")
-            result = memory_tool.execute(operation, **params)
+            result = memory_tool.run({"action":operation, **params})
             print(f"结果: {result[:100]}..." if len(str(result)) > 100 else f"结果: {result}")
     
     def demonstrate_extensibility(self):
@@ -175,11 +181,11 @@ class MemoryToolArchitectureDemo:
         # 演示自定义配置
         custom_config = MemoryConfig()
         custom_config.working_memory_capacity = 100
-        custom_config.working_memory_ttl = 120
+        custom_config.working_memory_ttl_minutes = 120
         
         print(f"\n⚙️ 自定义配置示例:")
         print(f"工作记忆容量: {custom_config.working_memory_capacity}")
-        print(f"工作记忆TTL: {custom_config.working_memory_ttl}分钟")
+        print(f"工作记忆TTL: {custom_config.working_memory_ttl_minutes}分钟")
         
         # 演示选择性启用记忆类型
         selective_memory_tool = MemoryTool(

@@ -139,12 +139,12 @@ jupyter lab
 
 **Step 1: Fork the Repository**
 
-1. Visit the Hello-Agents repository: https://github.com/datawhalechina/Hello-Agents
+1. Visit the Hello-Agents repository: https://github.com/datawhalechina/hello-agents
 2. Click the "Fork" button in the upper right corner, as shown in the red box in Figure 16.1
 3. Select your GitHub account and create the Fork
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/datawhalechina/Hello-Agents/main/docs/images/16-figures/16-1.png" alt="" width="85%"/>
+  <img src="https://raw.githubusercontent.com/datawhalechina/hello-agents/main/docs/images/16-figures/16-1.png" alt="" width="85%"/>
   <p>Figure 16.1 Fork Repository Steps</p>
 </div>
 
@@ -152,20 +152,20 @@ jupyter lab
 
 ```bash
 # As shown in Figure 16.2, clone your forked repository
-git clone git@github.com:your-username/Hello-Agents.git
+git clone git@github.com:your-username/hello-agents.git
 
 # Enter project directory
 cd Hello-Agents
 
 # Add upstream repository (for syncing updates)
-git remote add upstream https://github.com/datawhalechina/Hello-Agents.git
+git remote add upstream https://github.com/datawhalechina/hello-agents.git
 
 # View remote repositories
 git remote -v
 ```
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/datawhalechina/Hello-Agents/main/docs/images/16-figures/16-2.png" alt="" width="85%"/>
+  <img src="https://raw.githubusercontent.com/datawhalechina/hello-agents/main/docs/images/16-figures/16-2.png" alt="" width="85%"/>
   <p>Figure 16.2 Clone Repository to Local</p>
 </div>
 
@@ -257,27 +257,27 @@ Detailed introduction to your project:
 
 ### Install Dependencies
 
-\`\`\`bash
+
 pip install -r requirements.txt
-\`\`\`
+
 
 ### Configure API Keys
 
-\`\`\`bash
+
 # Create .env file
 cp .env.example .env
 
 # Edit .env file and fill in your API keys
-\`\`\`
+
 
 ### Run Project
 
-\`\`\`bash
+
 # Start Jupyter Notebook
 jupyter lab
 
 # Open main.ipynb and run
-\`\`\`
+
 
 ## 📖 Usage Examples
 
@@ -619,20 +619,20 @@ git push origin feature/your-project-name
 
 **Step 1: Visit GitHub**
 
-1. Visit your forked repository: `https://github.com/your-username/Hello-Agents`
+1. Visit your forked repository: `https://github.com/your-username/hello-agents`
 2. Click the "Pull requests" tab, as shown in Figure 16.3
 3. Click the "New pull request" button
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/datawhalechina/Hello-Agents/main/docs/images/16-figures/16-3.png" alt="" width="85%"/>
+  <img src="https://raw.githubusercontent.com/datawhalechina/hello-agents/main/docs/images/16-figures/16-3.png" alt="" width="85%"/>
   <p>Figure 16.3 Creating Pull Request</p>
 </div>
 
 **Step 2: Select Branches**
 
-- Base repository: `datawhalechina/Hello-Agents`
+- Base repository: `datawhalechina/hello-agents`
 - Base branch: `main`
-- Head repository: `your-username/Hello-Agents`
+- Head repository: `your-username/hello-agents`
 - Compare branch: `feature/your-project-name`
 
 **Step 3: Fill in PR Information**
@@ -697,7 +697,7 @@ Brief description of your project (2-3 sentences)
 As shown in Figure 16.4, click the "Create pull request" button to submit.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/datawhalechina/Hello-Agents/main/docs/images/16-figures/16-4.png" alt="" width="85%"/>
+  <img src="https://raw.githubusercontent.com/datawhalechina/hello-agents/main/docs/images/16-figures/16-4.png" alt="" width="85%"/>
   <p>Figure 16.4 Submit Pull Request</p>
 </div>
 
@@ -975,7 +975,7 @@ jupyter lab
 ## 👤 Author
 
 - GitHub: [@jjyaoao](https://github.com/jjyaoao)
-- Project link: [CodeReviewAgent](https://github.com/datawhalechina/Hello-Agents/tree/main/Co-creation-projects/jjyaoao-CodeReviewAgent)
+- Project link: [CodeReviewAgent](https://github.com/datawhalechina/hello-agents/tree/main/Co-creation-projects/jjyaoao-CodeReviewAgent)
 
 ## 🙏 Acknowledgments
 

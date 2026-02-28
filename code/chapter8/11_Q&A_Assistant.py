@@ -10,6 +10,8 @@
 - 学习回顾和报告生成
 """
 
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import time
 import json
@@ -17,7 +19,6 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 from hello_agents.tools import MemoryTool, RAGTool
 import gradio as gr
-
 
 class PDFLearningAssistant:
     """智能文档问答助手"""
@@ -62,12 +63,12 @@ class PDFLearningAssistant:
 
         try:
             # 使用RAG工具处理PDF
-            result = self.rag_tool.execute(
-                "add_document",
-                file_path=pdf_path,
-                chunk_size=1000,
-                chunk_overlap=200
-            )
+            result = self.rag_tool.run({
+                "action":"add_document",
+                "file_path":pdf_path,
+                "chunk_size":1000,
+                "chunk_overlap":200
+            })
 
             process_time = time.time() - start_time
 
@@ -76,14 +77,14 @@ class PDFLearningAssistant:
             self.stats["documents_loaded"] += 1
 
             # 记录到学习记忆
-            self.memory_tool.execute(
-                "add",
-                content=f"加载了文档《{self.current_document}》",
-                memory_type="episodic",
-                importance=0.9,
-                event_type="document_loaded",
-                session_id=self.session_id
-            )
+            self.memory_tool.run({
+                "action":"add",
+                "content":f"加载了文档《{self.current_document}》",
+                "memory_type":"episodic",
+                "importance":0.9,
+                "event_type":"document_loaded",
+                "session_id":self.session_id
+            })
 
             return {
                 "success": True,
@@ -110,33 +111,33 @@ class PDFLearningAssistant:
             return "⚠️ 请先加载文档！使用 load_document() 方法加载PDF文档。"
 
         # 记录问题到工作记忆
-        self.memory_tool.execute(
-            "add",
-            content=f"提问: {question}",
-            memory_type="working",
-            importance=0.6,
-            session_id=self.session_id
-        )
+        self.memory_tool.run({
+            "action":"add",
+            "content":f"提问: {question}",
+            "memory_type":"working",
+            "importance":0.6,
+            "session_id":self.session_id
+        })
 
         # 使用RAG检索答案
-        answer = self.rag_tool.execute(
-            "ask",
-            question=question,
-            limit=5,
-            enable_advanced_search=use_advanced_search,
-            enable_mqe=use_advanced_search,
-            enable_hyde=use_advanced_search
-        )
+        answer = self.rag_tool.run({
+            "action":"ask",
+            "question":question,
+            "limit":5,
+            "enable_advanced_search":use_advanced_search,
+            "enable_mqe":use_advanced_search,
+            "enable_hyde":use_advanced_search
+        })
 
         # 记录到情景记忆
-        self.memory_tool.execute(
-            "add",
-            content=f"关于'{question}'的学习",
-            memory_type="episodic",
-            importance=0.7,
-            event_type="qa_interaction",
-            session_id=self.session_id
-        )
+        self.memory_tool.run({
+            "action":"add",
+            "content":f"关于'{question}'的学习",
+            "memory_type":"episodic",
+            "importance":0.7,
+            "event_type":"qa_interaction",
+            "session_id":self.session_id
+        })
 
         self.stats["questions_asked"] += 1
 
@@ -149,14 +150,14 @@ class PDFLearningAssistant:
             content: 笔记内容
             concept: 相关概念（可选）
         """
-        self.memory_tool.execute(
-            "add",
-            content=content,
-            memory_type="semantic",
-            importance=0.8,
-            concept=concept or "general",
-            session_id=self.session_id
-        )
+        self.memory_tool.run({
+            "action":"add",
+            "content":content,
+            "memory_type":"semantic",
+            "importance":0.8,
+            "concept":concept or "general",
+            "session_id":self.session_id
+        })
 
         self.stats["concepts_learned"] += 1
 
@@ -170,11 +171,11 @@ class PDFLearningAssistant:
         Returns:
             str: 相关记忆
         """
-        result = self.memory_tool.execute(
-            "search",
-            query=query,
-            limit=limit
-        )
+        result = self.memory_tool.run({
+            "action":"search",
+            "query":query,
+            "limit":limit
+        })
         return result
 
     def get_stats(self) -> Dict[str, Any]:
@@ -203,10 +204,10 @@ class PDFLearningAssistant:
             Dict: 学习报告
         """
         # 获取记忆摘要
-        memory_summary = self.memory_tool.execute("summary", limit=10)
+        memory_summary = self.memory_tool.run({"action":"summary", "limit":10})
 
         # 获取RAG统计
-        rag_stats = self.rag_tool.execute("stats")
+        rag_stats = self.rag_tool.run({"action":"stats"})
 
         # 生成报告
         duration = (datetime.now() - self.stats["session_start"]).total_seconds()

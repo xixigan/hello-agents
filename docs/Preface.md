@@ -1,7 +1,3 @@
-<div align="right">
-  English | <a href="./前言.md">中文</a>
-</div>
-
 # Preface
 
 Since the end of 2022, Large Language Models (LLMs) represented by ChatGPT have swept across the world like a technological tsunami, completely transforming how we interact with artificial intelligence. The powerful natural language understanding and generation capabilities of LLMs have shown us a glimpse of the path toward Artificial General Intelligence (AGI). However, as the initial amazement settled, developers began exploring the next frontier: how to make AI not just a "question-answering" tool, but an "actor" capable of autonomous planning, tool invocation, and solving complex problems?

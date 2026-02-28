@@ -7,6 +7,8 @@
 
 import time
 from hello_agents.tools import RAGTool
+from dotenv import load_dotenv
+load_dotenv()
 
 class IntelligentQADemo:
     """智能问答演示类"""
@@ -172,9 +174,9 @@ class IntelligentQADemo:
         
         # 批量添加知识文档
         for doc in knowledge_documents:
-            result = self.rag_tool.execute("add_text",
-                                         text=doc["content"],
-                                         document_id=doc["id"])
+            result = self.rag_tool.run({"action":"add_text",
+                                         "text":doc["content"],
+                                         "document_id":doc["id"]})
             print(f"✅ 添加知识文档: {doc['id']}")
         
         print(f"📊 知识库设置完成")
@@ -237,10 +239,10 @@ class IntelligentQADemo:
                 print(f"\n❓ 问题: {question}")
                 
                 start_time = time.time()
-                answer = self.rag_tool.execute("ask",
-                                             question=question,
-                                             limit=3,
-                                             include_citations=True)
+                answer = self.rag_tool.run({"action":"ask",
+                                             "question":question,
+                                             "limit":3,
+                                             "include_citations":True})
                 qa_time = time.time() - start_time
                 
                 print(f"⏱️ 响应时间: {qa_time:.3f}秒")
@@ -267,21 +269,21 @@ class IntelligentQADemo:
         
         # 先进行搜索，查看检索到的片段
         print(f"\n🔍 第一步：检索相关片段")
-        search_result = self.rag_tool.execute("search",
-                                            query=complex_question,
-                                            limit=4,
-                                            enable_advanced_search=True)
+        search_result = self.rag_tool.run({"action":"search",
+                                            "query":complex_question,
+                                            "limit":4,
+                                            "enable_advanced_search":True})
         print(f"检索片段: {search_result}")
         
         # 然后进行智能问答，查看完整的上下文构建
         print(f"\n🤖 第二步：构建上下文并生成答案")
         start_time = time.time()
-        qa_result = self.rag_tool.execute("ask",
-                                        question=complex_question,
-                                        limit=4,
-                                        enable_advanced_search=True,
-                                        include_citations=True,
-                                        max_chars=1500)
+        qa_result = self.rag_tool.run({"action":"ask",
+                                        "question":complex_question,
+                                        "limit":4,
+                                        "enable_advanced_search":True,
+                                        "include_citations":True,
+                                        "max_chars":1500})
         qa_time = time.time() - start_time
         
         print(f"问答耗时: {qa_time:.3f}秒")
@@ -332,11 +334,11 @@ class IntelligentQADemo:
             
             # 执行问答
             start_time = time.time()
-            answer = self.rag_tool.execute("ask",
-                                         question=question,
-                                         limit=4,
-                                         enable_advanced_search=True,
-                                         include_citations=True)
+            answer = self.rag_tool.run({"action":"ask",
+                                         "question":question,
+                                         "limit":4,
+                                         "enable_advanced_search":True,
+                                         "include_citations":True})
             qa_time = time.time() - start_time
             
             # 分析答案质量
@@ -465,9 +467,9 @@ class IntelligentQADemo:
             
             # 这里简化演示，实际的提示词工程在RAGTool内部实现
             start_time = time.time()
-            answer = self.rag_tool.execute("ask",
-                                         question=test_question,
-                                         limit=3)
+            answer = self.rag_tool.run({"action":"ask",
+                                         "question":test_question,
+                                         "limit":3})
             response_time = time.time() - start_time
             
             print(f"⏱️ 响应时间: {response_time:.3f}秒")
@@ -497,16 +499,16 @@ class IntelligentQADemo:
             print(f"\n❓ 问题: {question}")
             
             # 启用引用的问答
-            answer_with_citations = self.rag_tool.execute("ask",
-                                                        question=question,
-                                                        limit=3,
-                                                        include_citations=True)
+            answer_with_citations = self.rag_tool.run({"action":"ask",
+                                                        "question":question,
+                                                        "limit":3,
+                                                        "include_citations":True})
             
             # 禁用引用的问答对比
-            answer_without_citations = self.rag_tool.execute("ask",
-                                                           question=question,
-                                                           limit=3,
-                                                           include_citations=False)
+            answer_without_citations = self.rag_tool.run({"action":"ask",
+                                                           "question":question,
+                                                           "limit":3,
+                                                           "include_citations":False})
             
             print(f"🔗 带引用回答: {answer_with_citations[:400]}...")
             print(f"📝 无引用回答: {answer_without_citations[:200]}...")

@@ -131,6 +131,7 @@ skills/pdf-processing/
   <img src="./images/Extra05-figures/image2.png" alt="MCP与Agent Skills设计哲学对比" width="90%"/>
   <p>图 2 MCP 与 Agent Skills 设计哲学对比</p>
 </div>
+
 ### 从工程视角理解差异
 
 让我们通过一个具体的例子来理解这种差异。假设你要构建一个智能体来帮助团队进行代码审查：

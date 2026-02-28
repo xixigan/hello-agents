@@ -5,6 +5,8 @@
 详细展示WorkingMemory、EpisodicMemory、SemanticMemory、PerceptualMemory的实现特点
 """
 
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import time
 import hashlib
@@ -63,15 +65,15 @@ class MemoryTypesDeepDive:
         
         for i in range(8):
             content = f"临时工作记忆 {i+1}: 当前正在处理任务步骤 {i+1}"
-            result = self.working_memory_tool.execute("add",
-                                                    content=content,
-                                                    memory_type="working",
-                                                    importance=0.3 + (i * 0.1),
-                                                    task_step=i+1)
+            result = self.working_memory_tool.run({"action":"add",
+                                                    "content":content,
+                                                    "memory_type":"working",
+                                                    "importance":0.3 + (i * 0.1),
+                                                    "task_step":i+1})
             print(f"  添加记忆 {i+1}: {result}")
         
         # 检查当前状态
-        stats = self.working_memory_tool.execute("stats")
+        stats = self.working_memory_tool.run({"action":"stats"})
         print(f"\n当前工作记忆状态: {stats}")
         
         # 演示TTL机制
@@ -90,11 +92,11 @@ class MemoryTypesDeepDive:
         
         for content, minutes_ago, importance in time_memories:
             # 这里我们模拟时间差异
-            result = self.working_memory_tool.execute("add",
-                                                    content=content,
-                                                    memory_type="working",
-                                                    importance=importance,
-                                                    simulated_age_minutes=minutes_ago)
+            result = self.working_memory_tool.run({"action":"add",
+                                                    "content":content,
+                                                    "memory_type":"working",
+                                                    "importance":importance,
+                                                    "simulated_age_minutes":minutes_ago})
             print(f"  添加记忆: {content} (模拟 {minutes_ago} 分钟前)")
         
         # 演示快速检索
@@ -104,10 +106,10 @@ class MemoryTypesDeepDive:
         
         for query in search_queries:
             start_time = time.time()
-            results = self.working_memory_tool.execute("search",
-                                                     query=query,
-                                                     memory_type="working",
-                                                     limit=3)
+            results = self.working_memory_tool.run({"action":"search",
+                                                     "query":query,
+                                                     "memory_type":"working",
+                                                     "limit":3})
             search_time = time.time() - start_time
             print(f"  查询 '{query}': {search_time:.4f}秒")
             print(f"    结果: {results[:100]}...")
@@ -116,17 +118,17 @@ class MemoryTypesDeepDive:
         print(f"\n4. 自动清理机制:")
         
         # 获取清理前的统计
-        before_stats = self.working_memory_tool.execute("stats")
+        before_stats = self.working_memory_tool.run({"action":"stats"})
         print(f"清理前: {before_stats}")
         
         # 触发清理（通过遗忘低重要性记忆）
-        forget_result = self.working_memory_tool.execute("forget",
-                                                       strategy="importance_based",
-                                                       threshold=0.4)
+        forget_result = self.working_memory_tool.run({"action":"forget",
+                                                       "strategy":"importance_based",
+                                                       "threshold":0.4})
         print(f"清理结果: {forget_result}")
         
         # 获取清理后的统计
-        after_stats = self.working_memory_tool.execute("stats")
+        after_stats = self.working_memory_tool.run({"action":"stats"})
         print(f"清理后: {after_stats}")
     
     def demonstrate_episodic_memory(self):
@@ -184,30 +186,30 @@ class MemoryTypesDeepDive:
         session_id = f"learning_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
         for i, event in enumerate(learning_session):
-            result = self.episodic_memory_tool.execute("add",
-                                                     content=event["content"],
-                                                     memory_type="episodic",
-                                                     importance=event["importance"],
-                                                     session_id=session_id,
-                                                     sequence_number=i+1,
-                                                     **{k: v for k, v in event.items() if k not in ["content", "importance"]})
+            result = self.episodic_memory_tool.run({"action":"add",
+                                                     "content":event["content"],
+                                                     "memory_type":"episodic",
+                                                     "importance":event["importance"],
+                                                     "session_id":session_id,
+                                                     "sequence_number":i+1,
+                                                     **{k: v for k, v in event.items() if k not in ["content", "importance"]}})
             print(f"  事件 {i+1}: {result}")
         
         # 演示时间序列检索
         print(f"\n2. 时间序列检索演示:")
         
         # 按时间顺序检索
-        timeline_search = self.episodic_memory_tool.execute("search",
-                                                          query="学习",
-                                                          memory_type="episodic",
-                                                          limit=10)
+        timeline_search = self.episodic_memory_tool.run({"action":"search",
+                                                          "query":"学习",
+                                                          "memory_type":"episodic",
+                                                          "limit":10})
         print(f"学习时间线: {timeline_search}")
         
         # 按会话检索
-        session_search = self.episodic_memory_tool.execute("search",
-                                                         query="线性回归",
-                                                         memory_type="episodic",
-                                                         limit=5)
+        session_search = self.episodic_memory_tool.run({"action":"search",
+                                                         "query":"线性回归",
+                                                         "memory_type":"episodic",
+                                                         "limit":5})
         print(f"会话内容: {session_search}")
         
         # 演示上下文丰富性
@@ -230,11 +232,11 @@ class MemoryTypesDeepDive:
             "satisfaction_rating": 9
         }
         
-        context_result = self.episodic_memory_tool.execute("add",
-                                                         content=rich_context_memory["content"],
-                                                         memory_type="episodic",
-                                                         importance=0.9,
-                                                         **{k: v for k, v in rich_context_memory.items() if k != "content"})
+        context_result = self.episodic_memory_tool.run({"action":"add",
+                                                         "content":rich_context_memory["content"],
+                                                         "memory_type":"episodic",
+                                                         "importance":0.9,
+                                                         **{k: v for k, v in rich_context_memory.items() if k != "content"}})
         print(f"丰富上下文记忆: {context_result}")
         
         # 演示记忆链条
@@ -253,13 +255,13 @@ class MemoryTypesDeepDive:
         for content, chain_type, parent_type in memory_chain:
             parent_id = chain_memories.get(parent_type) if parent_type else None
             
-            result = self.episodic_memory_tool.execute("add",
-                                                     content=content,
-                                                     memory_type="episodic",
-                                                     importance=0.7,
-                                                     chain_type=chain_type,
-                                                     parent_memory=parent_id,
-                                                     chain_id="gpt_learning_chain")
+            result = self.episodic_memory_tool.run({"action":"add",
+                                                     "content":content,
+                                                     "memory_type":"episodic",
+                                                     "importance":0.7,
+                                                     "chain_type":chain_type,
+                                                     "parent_memory":parent_id,
+                                                     "chain_id":"gpt_learning_chain"})
             
             # 提取记忆ID（简化处理）
             memory_id = f"{chain_type}_memory"
@@ -267,10 +269,10 @@ class MemoryTypesDeepDive:
             print(f"  链条记忆: {content} (类型: {chain_type})")
         
         # 检索整个链条
-        chain_search = self.episodic_memory_tool.execute("search",
-                                                        query="GPT Transformer",
-                                                        memory_type="episodic",
-                                                        limit=8)
+        chain_search = self.episodic_memory_tool.run({"action":"search",
+                                                        "query":"GPT Transformer",
+                                                        "memory_type":"episodic",
+                                                        "limit":8})
         print(f"记忆链条检索: {chain_search}")
     
     def demonstrate_semantic_memory(self):
@@ -323,11 +325,11 @@ class MemoryTypesDeepDive:
         ]
         
         for concept in concepts:
-            result = self.semantic_memory_tool.execute("add",
-                                                     content=concept["content"],
-                                                     memory_type="semantic",
-                                                     importance=concept["importance"],
-                                                     **{k: v for k, v in concept.items() if k not in ["content", "importance"]})
+            result = self.semantic_memory_tool.run({"action":"add",
+                                                     "content":concept["content"],
+                                                     "memory_type":"semantic",
+                                                     "importance":concept["importance"],
+                                                     **{k: v for k, v in concept.items() if k not in ["content", "importance"]}})
             print(f"  概念存储: {concept['concept_type']} - {result}")
         
         # 演示关系推理
@@ -359,11 +361,11 @@ class MemoryTypesDeepDive:
         ]
         
         for relation in relationships:
-            result = self.semantic_memory_tool.execute("add",
-                                                     content=relation["content"],
-                                                     memory_type="semantic",
-                                                     importance=0.8,
-                                                     **{k: v for k, v in relation.items() if k != "content"})
+            result = self.semantic_memory_tool.run({"action":"add",
+                                                     "content":relation["content"],
+                                                     "memory_type":"semantic",
+                                                     "importance":0.8,
+                                                     **{k: v for k, v in relation.items() if k != "content"}})
             print(f"  关系存储: {relation['relation_type']} - {result}")
         
         # 演示语义检索
@@ -378,10 +380,10 @@ class MemoryTypesDeepDive:
         
         for query in semantic_queries:
             start_time = time.time()
-            results = self.semantic_memory_tool.execute("search",
-                                                      query=query,
-                                                      memory_type="semantic",
-                                                      limit=3)
+            results = self.semantic_memory_tool.run({"action":"search",
+                                                      "query":query,
+                                                      "memory_type":"semantic",
+                                                      "limit":3})
             search_time = time.time() - start_time
             print(f"  查询: '{query}' ({search_time:.4f}秒)")
             print(f"    结果: {results[:150]}...")
@@ -417,15 +419,15 @@ class MemoryTypesDeepDive:
         ]
         
         for item in entities_and_relations:
-            result = self.semantic_memory_tool.execute("add",
-                                                     content=item["content"],
-                                                     memory_type="semantic",
-                                                     importance=0.8,
-                                                     **{k: v for k, v in item.items() if k != "content"})
+            result = self.semantic_memory_tool.run({"action":"add",
+                                                     "content":item["content"],
+                                                     "memory_type":"semantic",
+                                                     "importance":0.8,
+                                                     **{k: v for k, v in item.items() if k != "content"}})
             print(f"  实体关系: {item['entity_type']} - {result}")
         
         # 获取语义记忆统计
-        semantic_stats = self.semantic_memory_tool.execute("stats")
+        semantic_stats = self.semantic_memory_tool.run({"action":"stats"})
         print(f"\n语义记忆统计: {semantic_stats}")
     
     def demonstrate_perceptual_memory(self):
@@ -462,11 +464,11 @@ class MemoryTypesDeepDive:
         ]
         
         for perception in text_perceptions:
-            result = self.perceptual_memory_tool.execute("add",
-                                                       content=perception["content"],
-                                                       memory_type="perceptual",
-                                                       importance=0.7,
-                                                       **{k: v for k, v in perception.items() if k != "content"})
+            result = self.perceptual_memory_tool.run({"action":"add",
+                                                       "content":perception["content"],
+                                                       "memory_type":"perceptual",
+                                                       "importance":0.7,
+                                                       **{k: v for k, v in perception.items() if k != "content"}})
             print(f"  文本感知: {perception['genre']} - {result}")
         
         # 演示图像感知记忆（模拟）
@@ -496,12 +498,12 @@ class MemoryTypesDeepDive:
         ]
         
         for perception in image_perceptions:
-            result = self.perceptual_memory_tool.execute("add",
-                                                       content=perception["content"],
-                                                       memory_type="perceptual",
-                                                       importance=0.8,
-                                                       **{k: v for k, v in perception.items() if k != "content"})
-            print(f"  图像感知: {perception['scene_type']} - {result}")
+            result = self.perceptual_memory_tool.run({"action":"add",
+                                                       "content":perception["content"],
+                                                       "memory_type":"perceptual",
+                                                       "importance":0.8,
+                                                       **{k: v for k, v in perception.items() if k != "content"}})
+            print(f"  图像感知: {perception['content']} - {result}")
         
         # 演示音频感知记忆（模拟）
         print(f"\n3. 音频感知记忆（模拟）:")
@@ -530,12 +532,12 @@ class MemoryTypesDeepDive:
         ]
         
         for perception in audio_perceptions:
-            result = self.perceptual_memory_tool.execute("add",
-                                                       content=perception["content"],
-                                                       memory_type="perceptual",
-                                                       importance=0.7,
-                                                       **{k: v for k, v in perception.items() if k != "content"})
-            print(f"  音频感知: {perception['genre']} - {result}")
+            result = self.perceptual_memory_tool.run({"action":"add",
+                                                       "content":perception["content"],
+                                                       "memory_type":"perceptual",
+                                                       "importance":0.7,
+                                                       **{k: v for k, v in perception.items() if k != "content"}})
+            print(f"  音频感知: {perception['content']} - {result}")
         
         # 演示跨模态检索
         print(f"\n4. 跨模态检索演示:")
@@ -548,10 +550,10 @@ class MemoryTypesDeepDive:
         ]
         
         for query, description in cross_modal_queries:
-            results = self.perceptual_memory_tool.execute("search",
-                                                        query=query,
-                                                        memory_type="perceptual",
-                                                        limit=3)
+            results = self.perceptual_memory_tool.run({"action":"search",
+                                                        "query":query,
+                                                        "memory_type":"perceptual",
+                                                        "limit":3})
             print(f"  跨模态查询: '{query}' ({description})")
             print(f"    结果: {results[:120]}...")
         
@@ -559,14 +561,14 @@ class MemoryTypesDeepDive:
         print(f"\n5. 感知特征分析:")
         
         # 获取感知记忆统计
-        perceptual_stats = self.perceptual_memory_tool.execute("stats")
+        perceptual_stats = self.perceptual_memory_tool.run({"action":"stats"})
         print(f"感知记忆统计: {perceptual_stats}")
         
         # 分析不同模态的分布
-        modality_analysis = self.perceptual_memory_tool.execute("search",
-                                                              query="模态分析",
-                                                              memory_type="perceptual",
-                                                              limit=10)
+        modality_analysis = self.perceptual_memory_tool.run({"action":"search",
+                                                              "query":"模态分析",
+                                                              "memory_type":"perceptual",
+                                                              "limit":10})
         print(f"模态分布分析: {modality_analysis}")
     
     def demonstrate_memory_interactions(self):
@@ -586,14 +588,14 @@ class MemoryTypesDeepDive:
         # 1. 感知阶段：接收多模态信息
         print(f"\n1. 感知阶段 - 接收信息:")
         
-        perceptual_input = self.perceptual_memory_tool.execute("add",
-                                                             content="观看了一个关于深度学习的视频教程",
-                                                             memory_type="perceptual",
-                                                             importance=0.8,
-                                                             modality="video",
-                                                             topic="deep_learning",
-                                                             duration_minutes=45,
-                                                             quality="high")
+        perceptual_input = self.perceptual_memory_tool.run({"action":"add",
+                                                             "content":"观看了一个关于深度学习的视频教程",
+                                                             "memory_type":"perceptual",
+                                                             "importance":0.8,
+                                                             "modality":"video",
+                                                             "topic":"deep_learning",
+                                                             "duration_minutes":45,
+                                                             "quality":"high"})
         print(f"感知记忆: {perceptual_input}")
         
         # 2. 工作记忆阶段：临时处理和思考
@@ -607,25 +609,25 @@ class MemoryTypesDeepDive:
         ]
         
         for thought in working_thoughts:
-            result = self.working_memory_tool.execute("add",
-                                                    content=thought,
-                                                    memory_type="working",
-                                                    importance=0.6,
-                                                    processing_stage="active_thinking")
+            result = self.working_memory_tool.run({"action":"add",
+                                                    "content":thought,
+                                                    "memory_type":"working",
+                                                    "importance":0.6,
+                                                    "processing_stage":"active_thinking"})
             print(f"  工作记忆: {thought[:30]}... - {result}")
         
         # 3. 情景记忆阶段：记录完整学习事件
         print(f"\n3. 情景记忆阶段 - 事件记录:")
         
-        episodic_event = self.episodic_memory_tool.execute("add",
-                                                         content="完成了深度学习视频教程的学习，理解了CNN的核心概念",
-                                                         memory_type="episodic",
-                                                         importance=0.9,
-                                                         event_type="learning_session",
-                                                         duration_minutes=45,
-                                                         location="家里",
-                                                         learning_outcome="理解CNN原理",
-                                                         next_action="实践编程")
+        episodic_event = self.episodic_memory_tool.run({"action":"add",
+                                                         "content":"完成了深度学习视频教程的学习，理解了CNN的核心概念",
+                                                         "memory_type":"episodic",
+                                                         "importance":0.9,
+                                                         "event_type":"learning_session",
+                                                         "duration_minutes":45,
+                                                         "location":"家里",
+                                                         "learning_outcome":"理解CNN原理",
+                                                         "next_action":"实践编程"})
         print(f"情景记忆: {episodic_event}")
         
         # 4. 语义记忆阶段：抽象知识存储
@@ -647,21 +649,21 @@ class MemoryTypesDeepDive:
         ]
         
         for knowledge in semantic_knowledge:
-            result = self.semantic_memory_tool.execute("add",
-                                                     content=knowledge["content"],
-                                                     memory_type="semantic",
-                                                     importance=0.8,
-                                                     **{k: v for k, v in knowledge.items() if k != "content"})
+            result = self.semantic_memory_tool.run({"action":"add",
+                                                     "content":knowledge["content"],
+                                                     "memory_type":"semantic",
+                                                     "importance":0.8,
+                                                     **{k: v for k, v in knowledge.items() if k != "content"}})
             print(f"  语义记忆: {knowledge['concept']} - {result}")
         
         # 5. 记忆整合演示
         print(f"\n5. 记忆整合演示:")
         
         # 从工作记忆整合到情景记忆
-        consolidation_result = self.working_memory_tool.execute("consolidate",
-                                                              from_type="working",
-                                                              to_type="episodic",
-                                                              importance_threshold=0.6)
+        consolidation_result = self.working_memory_tool.run({"action":"consolidate",
+                                                              "from_type":"working",
+                                                              "to_type":"episodic",
+                                                              "importance_threshold":0.6})
         print(f"工作记忆整合: {consolidation_result}")
         
         # 跨记忆类型检索
@@ -678,14 +680,14 @@ class MemoryTypesDeepDive:
         ]
         
         for memory_name, tool in memory_tools:
-            results = tool.execute("search", query=query, limit=2)
+            results = tool.run({"action":"search", "query":query, "limit":2})
             print(f"  {memory_name}检索: {results[:80]}...")
         
         # 获取所有记忆系统的统计
         print(f"\n7. 系统整体状态:")
         
         for memory_name, tool in memory_tools:
-            stats = tool.execute("stats")
+            stats = tool.run({"action":"stats"})
             print(f"  {memory_name}: {stats}")
 
 def main():

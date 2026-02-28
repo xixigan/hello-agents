@@ -129,8 +129,8 @@ However, this powerful intuitive capability also comes with opacity. Sub-symboli
 
 For a long time, the two camps of symbolism and sub-symbolism developed like two parallel lines. To overcome the limitations of the above two paradigms, a "grand reconciliation" idea began to emerge, which is neuro-symbolic AI, also called neuro-symbolic hybrid. Its goal is to merge the advantages of both paradigms, creating a hybrid agent that can both learn from data like neural networks and perform logical reasoning like symbolic systems. It attempts to bridge the gap between perception and cognition, intuition and rationality. Nobel Prize-winning economist Daniel Kahneman's dual-system theory proposed in his book "Thinking, Fast and Slow" provides an excellent analogy for understanding neuro-symbolism<sup>[2]</sup>, as shown in Figure 1.4:
 
-- **System 1** is a fast, intuitive, parallel thinking mode, similar to the powerful pattern recognition capability of sub-symbolic AI.
-- **System 2** is slow, methodical, logic-based deliberative thinking, just like the reasoning process of symbolic AI.
+- **System 1** is slow, methodical, logic-based deliberative thinking, just like the reasoning process of symbolic AI.
+- **System 2** is a fast, intuitive, parallel thinking mode, similar to the powerful pattern recognition capability of sub-symbolic AI.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/datawhalechina/Hello-Agents/main/docs/images/1-figures/1757242319667-4.png" alt="Figure description" width="90%"/>
@@ -237,13 +237,20 @@ You are an intelligent travel assistant. Your task is to analyze user requests a
 - `get_weather(city: str)`: Query real-time weather for a specified city.
 - `get_attraction(city: str, weather: str)`: Search for recommended tourist attractions based on city and weather.
 
-# Action Format:
-Your response must strictly follow the following format. First is your thinking process, then the specific action you want to execute. Each response should output only one Thought-Action pair:
-Thought: [Here is your thinking process and next step plan]
-Action: [Here is the tool you want to call, in the format function_name(arg_name="arg_value")]
+# Output Format Requirements:
+Each response must strictly follow this format, containing one Thought-Action pair:
 
-# Task Completion:
-When you have collected enough information to answer the user's final question, you must use `finish(answer="...")` after the Action: field to output the final answer.
+Thought: [Your thinking process and next step plan]
+Action: [The specific action you want to execute]
+
+Action format must be one of the following:
+1. Call a tool: function_name(arg_name="arg_value")
+2. Finish task: Finish[final answer]
+
+# Important Notes:
+- Output only one Thought-Action pair each time
+- Action must be on the same line, do not break lines
+- When you have collected enough information to answer the user's question, you must use Action: Finish[final answer] format to end
 
 Let's begin!
 """
@@ -255,7 +262,6 @@ We will use the free weather query service `wttr.in`, which can return weather d
 
 ```python
 import requests
-import json
 
 def get_weather(city: str) -> str:
     """
@@ -380,7 +386,7 @@ class OpenAICompatibleClient:
             return "Error: Error occurred when calling language model service."
 ```
 
-To instantiate this class, you need to provide three pieces of information: `API_KEY`, `BASE_URL`, and `MODEL_ID`. The specific values depend on the service provider you use (such as OpenAI official, Azure, or local models like Ollama). If you don't have access to these yet, you can refer to [1.2 API Setup](https://datawhalechina.github.io/handy-multi-agent/#/chapter1/1.2.api-setup) in another Datawhale tutorial.
+To instantiate this class, you need to provide three pieces of information: `API_KEY`, `BASE_URL`, and `MODEL_ID`. The specific values depend on the service provider you use (such as OpenAI official, Azure, or local models like Ollama). If you don't have access to these yet, you can refer to [Environment Configuration](https://github.com/datawhalechina/hello-agents/blob/main/Extra-Chapter/Extra07-环境配置.md).
 
 ### 1.3.3 Executing the Action Loop
 
@@ -432,12 +438,15 @@ for i in range(5): # Set maximum number of loops
     # 3.3. Parse and execute action
     action_match = re.search(r"Action: (.*)", llm_output, re.DOTALL)
     if not action_match:
-        print("Parse error: Action not found in model output.")
-        break
+        observation = "Error: No action found. Please explicitly use Action: finish(...) or other actions."
+        observation_str = f"Observation: {observation}"
+        print(f"{observation_str}\n" + "="*40)
+        prompt_history.append(observation_str)
+        continue
     action_str = action_match.group(1).strip()
 
-    if action_str.startswith("finish"):
-        final_answer = re.search(r'finish\(answer="(.*)"\)', action_str).group(1)
+    if action_str.startswith("Finish"):
+        final_answer = re.match(r"Finish\[(.*)\]", action_str).group(1)
         print(f"Task completed, final answer: {final_answer}")
         break
 
@@ -491,7 +500,7 @@ Calling large language model...
 Large language model responded successfully.
 Model output:
 Thought: I have obtained two attraction suggestions suitable for sunny days, now I can provide a satisfactory response to the user based on this information.
-Action: finish(answer="Today's weather in Beijing is sunny with a temperature of 26 degrees Celsius, very suitable for outdoor activities. I recommend you visit the Summer Palace to enjoy the beautiful lake views and ancient architecture, or go to the Great Wall to experience its spectacular scenery and profound historical significance. Hope you have a pleasant trip!")
+Action: Finish[Today's weather in Beijing is sunny with a temperature of 26 degrees Celsius, very suitable for outdoor activities. I recommend you visit the Summer Palace to enjoy the beautiful lake views and ancient architecture, or go to the Great Wall to experience its spectacular scenery and profound historical significance. Hope you have a pleasant trip!]
 
 Task completed, final answer: Today's weather in Beijing is sunny with a temperature of 26 degrees Celsius, very suitable for outdoor activities. I recommend you visit the Summer Palace to enjoy the beautiful lake views and ancient architecture, or go to the Great Wall to experience its spectacular scenery and profound historical significance. Hope you have a pleasant trip!
 ```

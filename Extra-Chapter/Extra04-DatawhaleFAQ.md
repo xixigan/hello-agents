@@ -250,6 +250,30 @@
 - 要点整理：
   - 模型余额不足，需要充值。
 
+**Q27. Hugging Face 开源大模型报错Connection aborted.**
+
+- 要点整理：
+  - 网络原因，建议使用HF_ENDPOINT进行配置
+    - 示例详见 code/chapter3/Qwen.py
+    - https://hf-mirror.com
+   
+如果报错(MaxRetryError("HTTPSConnectionPool(host='huggingface.co', port=443)这个错误
+可以在代码中加入
+```
+import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+```
+或者直接在命令行
+(Linux\mac)
+```bash
+export HF_ENDPOINT="https://hf-mirror.com"
+```
+(win's powshell)
+```bash
+$env:HF_ENDPOINT = "https://hf-mirror.com"
+```
+
+
 ## 8. 数学基础问题
 
 <strong>Q22. 在概率公式中，如何理解P(w_2∣w_1)</strong>

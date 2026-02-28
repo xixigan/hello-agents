@@ -5,20 +5,26 @@ AGENT_SYSTEM_PROMPT = """
 - `get_weather(city: str)`: 查询指定城市的实时天气。
 - `get_attraction(city: str, weather: str)`: 根据城市和天气搜索推荐的旅游景点。
 
-# 行动格式:
-你的回答必须严格遵循以下格式。首先是你的思考过程，然后是你要执行的具体行动，每次回复只输出一对Thought-Action：
-Thought: [这里是你的思考过程和下一步计划]
-Action: [这里是你要调用的工具，格式为 function_name(arg_name="arg_value")]
+# 输出格式要求:
+你的每次回复必须严格遵循以下格式，包含一对Thought和Action：
 
-# 任务完成:
-当你收集到足够的信息，能够回答用户的最终问题时，你必须在`Action:`字段后使用 `finish(answer="...")` 来输出最终答案。
+Thought: [你的思考过程和下一步计划]
+Action: [你要执行的具体行动]
+
+Action的格式必须是以下之一：
+1. 调用工具：function_name(arg_name="arg_value")
+2. 结束任务：Finish[最终答案]
+
+# 重要提示:
+- 每次只输出一对Thought-Action
+- Action必须在同一行，不要换行
+- 当收集到足够信息可以回答用户问题时，必须使用 Action: Finish[最终答案] 格式结束
 
 请开始吧！
 """
 
 
 import requests
-import json
 
 def get_weather(city: str) -> str:
     """
@@ -175,12 +181,15 @@ for i in range(5): # 设置最大循环次数
     # 3.3. 解析并执行行动
     action_match = re.search(r"Action: (.*)", llm_output, re.DOTALL)
     if not action_match:
-        print("解析错误：模型输出中未找到 Action。")
-        break
+        observation = "错误: 未能解析到 Action 字段。请确保你的回复严格遵循 'Thought: ... Action: ...' 的格式。"
+        observation_str = f"Observation: {observation}"
+        print(f"{observation_str}\n" + "="*40)
+        prompt_history.append(observation_str)
+        continue
     action_str = action_match.group(1).strip()
 
-    if action_str.startswith("finish"):
-        final_answer = re.search(r'finish\(answer="(.*)"\)', action_str).group(1)
+    if action_str.startswith("Finish"):
+        final_answer = re.match(r"Finish\[(.*)\]", action_str).group(1)
         print(f"任务完成，最终答案: {final_answer}")
         break
     
